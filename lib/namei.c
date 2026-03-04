@@ -25,8 +25,9 @@ static dev_t erofs_new_decode_dev(u32 dev)
 int erofs_read_inode_from_disk(struct erofs_inode *vi)
 {
 	struct erofs_sb_info *sbi = vi->sbi;
-	erofs_blk_t blkaddr = erofs_blknr(sbi, erofs_iloc(vi));
-	unsigned int ofs = erofs_blkoff(sbi, erofs_iloc(vi));
+	erofs_off_t inode_loc = erofs_iloc(vi);
+	erofs_blk_t blkaddr;
+	unsigned int ofs;
 	bool in_mbox = erofs_inode_in_metabox(vi);
 	struct erofs_buf buf = __EROFS_BUF_INITIALIZER;
 	erofs_blk_t addrmask = BIT_ULL(48) - 1;
@@ -35,6 +36,18 @@ int erofs_read_inode_from_disk(struct erofs_inode *vi)
 	unsigned int ifmt;
 	void *ptr;
 	int err = 0;
+
+	if (!in_mbox && sbi->primarydevice_blocks &&
+	    inode_loc + sizeof(struct erofs_inode_compact) >
+	    erofs_pos(sbi, sbi->primarydevice_blocks)) {
+		erofs_err("invalid nid %llu (inode location %llu beyond image size %llu)",
+			  vi->nid | 0ULL, inode_loc | 0ULL,
+			  erofs_pos(sbi, sbi->primarydevice_blocks) | 0ULL);
+		return -EFSCORRUPTED;
+	}
+
+	blkaddr = erofs_blknr(sbi, inode_loc);
+	ofs = erofs_blkoff(sbi, inode_loc);
 
 	ptr = erofs_read_metabuf(&buf, sbi, erofs_pos(sbi, blkaddr), in_mbox);
 	if (IS_ERR(ptr)) {
