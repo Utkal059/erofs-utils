@@ -142,7 +142,7 @@ static void usage(int argc, char **argv)
 		" -zX[,level=Y]         X=compressor (Y=compression level, Z=dictionary size, optional)\n"
 		"    [,dictsize=Z]      alternative compressors can be separated by colons(:)\n"
 		"    [:...]             supported compressors and their option ranges are:\n",
-		argv[0], EROFS_WARN);
+		argv[0], EROFS_ERR);
 	while ((s = z_erofs_list_available_compressors(&i)) != NULL) {
 		const char spaces[] = "                         ";
 

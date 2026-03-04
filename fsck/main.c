@@ -132,7 +132,7 @@ static void usage(int argc, char **argv)
 		"                        filesystem without applying umask (default for\n"
 		"                        superuser), or to modify the permissions by applying\n"
 		"                        umask (default for ordinary users)\n",
-		EROFS_WARN);
+		EROFS_ERR);
 }
 
 static void erofsfsck_print_version(void)

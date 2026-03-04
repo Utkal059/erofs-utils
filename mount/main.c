@@ -111,7 +111,7 @@ static void usage(int argc, char **argv)
 		"   oci.zinfo=<path>    path to gzip zinfo file (optional)\n"
 		"   oci.insecure        use HTTP instead of HTTPS (optional)\n"
 #endif
-		, argv[0], EROFS_WARN);
+		, argv[0], EROFS_ERR);
 }
 
 static void version(void)

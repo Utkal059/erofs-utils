@@ -26,7 +26,7 @@ void erofs_init_configure(void)
 {
 	memset(&cfg, 0, sizeof(cfg));
 
-	cfg.c_dbg_lvl  = EROFS_WARN;
+	cfg.c_dbg_lvl  = EROFS_ERR;
 	cfg.c_version  = PACKAGE_VERSION;
 	cfg.c_dry_run  = false;
 	erofs_stdout_tty = isatty(STDOUT_FILENO);
