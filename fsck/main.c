@@ -378,6 +378,20 @@ static int erofs_verify_xattr(struct erofs_inode *inode)
 	ofs = erofs_blkoff(sbi, addr) + xattr_hdr_size;
 	addr += xattr_hdr_size;
 	remaining -= xattr_hdr_size;
+	/* Validate shared count fits within remaining xattr space.
+	 * h_shared_count is a raw u8 from disk; if it exceeds the
+	 * available space, remaining goes negative and the inline
+	 * xattr validation loop at line 396 is silently skipped,
+	 * causing fsck to miss structurally corrupt xattr data.
+	 */
+	if ((unsigned int)xattr_shared_count * xattr_entry_size >
+	    (unsigned int)remaining) {
+		erofs_err("nid %llu: h_shared_count %u exceeds xattr_isize %u",
+			  (unsigned long long)inode->nid,
+			  xattr_shared_count, inode->xattr_isize);
+		ret = -EFSCORRUPTED;
+		goto out;
+	}
 	for (i = 0; i < xattr_shared_count; ++i) {
 		if (ofs >= erofs_blksiz(sbi)) {
 			if (ofs != erofs_blksiz(sbi)) {
