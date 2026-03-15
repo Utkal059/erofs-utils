@@ -630,8 +630,14 @@ static int z_erofs_map_blocks_ext(struct erofs_inode *vi,
 			if (map->m_plen & Z_EROFS_EXTENT_PLEN_PARTIAL)
 				map->m_flags |= EROFS_MAP_PARTIAL_REF;
 			map->m_plen &= Z_EROFS_EXTENT_PLEN_MASK;
-			if (fmt)
+			if (fmt) {
+				if (fmt - 1 >= Z_EROFS_COMPRESSION_MAX) {
+					erofs_err("unknown algorithm format %u for encoded extent, nid %llu",
+						  fmt - 1, vi->nid | 0ULL);
+					return -EOPNOTSUPP;
+				}
 				map->m_algorithmformat = fmt - 1;
+			}
 			else if (interlaced && !((map->m_pa | map->m_plen) & bmask))
 				map->m_algorithmformat =
 					Z_EROFS_COMPRESSION_INTERLACED;
@@ -738,10 +744,18 @@ int z_erofs_map_blocks_iter(struct erofs_inode *vi,
 			else
 				err = z_erofs_map_blocks_fo(vi, map, flags);
 		}
-		if (!err && (map->m_flags & EROFS_MAP_ENCODED) &&
-		    __erofs_unlikely(map->m_plen > Z_EROFS_PCLUSTER_MAX_SIZE ||
-				     map->m_llen > Z_EROFS_PCLUSTER_MAX_DSIZE))
-			err = -EOPNOTSUPP;
+		if (!err && (map->m_flags & EROFS_MAP_ENCODED)) {
+			if (__erofs_unlikely(map->m_plen >
+						    Z_EROFS_PCLUSTER_MAX_SIZE ||
+						    map->m_llen > Z_EROFS_PCLUSTER_MAX_DSIZE)) {
+				err = -EOPNOTSUPP;
+			} else if (map->m_pa && map->m_plen &&
+					   map->m_pa + map->m_plen < map->m_pa) {
+				erofs_err("bogus physical extent: pa %" PRIu64 " plen %" PRIu64,
+					  map->m_pa, map->m_plen);
+				err = -EFSCORRUPTED;
+			}
+		}
 		if (err)
 			map->m_llen = 0;
 	}
