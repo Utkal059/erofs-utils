@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0+ OR Apache-2.0 */
+/* SPDX-License-Identifier: GPL-2.0+ OR MIT */
 /*
  * Copyright (C) 2025 Tencent, Inc.
  *             http://www.tencent.com/
@@ -76,6 +76,9 @@ struct ocierofs_iostream {
  */
 int ocierofs_build_trees(struct erofs_importer *importer,
 			 const struct ocierofs_config *cfg);
+int ocierofs_ctx_init(struct ocierofs_ctx *ctx,
+		      const struct ocierofs_config *cfg);
+void ocierofs_ctx_cleanup(struct ocierofs_ctx *ctx);
 int ocierofs_io_open(struct erofs_vfile *vf, const struct ocierofs_config *cfg);
 
 char *ocierofs_encode_userpass(const char *username, const char *password);

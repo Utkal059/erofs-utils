@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0+ OR Apache-2.0
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -173,16 +173,17 @@ int erofs_iostream_read(struct erofs_iostream *ios, void **buf, u64 bytes)
 #if defined(HAVE_ZLIB)
 			ret = gzread(ios->handler, ios->buffer + rabytes,
 				     ios->bufsize - rabytes);
-			if (!ret) {
-				int errnum;
+			if (ret <= 0) {
 				const char *errstr;
+				int errnum;
 
 				errstr = gzerror(ios->handler, &errnum);
-				if (errnum != Z_STREAM_END) {
+				if (!ret && errnum == Z_STREAM_END) {
+					ios->feof = true;
+				} else {
 					erofs_err("failed to gzread: %s", errstr);
 					return -EIO;
 				}
-				ios->feof = true;
 			}
 			ios->tail += ret;
 #else
@@ -250,6 +251,7 @@ int erofs_iostream_read(struct erofs_iostream *ios, void **buf, u64 bytes)
 int erofs_iostream_bread(struct erofs_iostream *ios, void *buf, u64 bytes)
 {
 	u64 rem = bytes;
+	u8 *dst = buf;
 	void *src;
 	int ret;
 
@@ -257,7 +259,8 @@ int erofs_iostream_bread(struct erofs_iostream *ios, void *buf, u64 bytes)
 		ret = erofs_iostream_read(ios, &src, rem);
 		if (ret < 0)
 			return ret;
-		memcpy(buf, src, ret);
+		memcpy(dst, src, ret);
+		dst += ret;
 		rem -= ret;
 	} while (rem && ret);
 
@@ -471,7 +474,7 @@ int tarerofs_parse_pax_header(struct erofs_iostream *ios,
 	char *buf, *p;
 	int ret;
 
-	buf = malloc(size);
+	buf = malloc((size_t)size + 1);
 	if (!buf)
 		return -ENOMEM;
 	p = buf;
@@ -479,6 +482,7 @@ int tarerofs_parse_pax_header(struct erofs_iostream *ios,
 	ret = erofs_iostream_bread(ios, buf, size);
 	if (ret != size)
 		goto out;
+	buf[size] = '\0';
 
 	while (p < buf + size) {
 		char *kv, *key, *value;
@@ -868,6 +872,8 @@ out_eot:
 		st.st_mode = S_IFIFO;
 		break;
 	case 'g':
+		if ((u64)st.st_size >= UINT_MAX)
+			goto invalid_tar;
 		ret = tarerofs_parse_pax_header(&tar->ios, &tar->global,
 						st.st_size);
 		if (ret)
@@ -882,6 +888,8 @@ out_eot:
 		}
 		goto restart;
 	case 'x':
+		if ((u64)st.st_size >= UINT_MAX)
+			goto invalid_tar;
 		ret = tarerofs_parse_pax_header(&tar->ios, &eh, st.st_size);
 		if (ret)
 			goto out;

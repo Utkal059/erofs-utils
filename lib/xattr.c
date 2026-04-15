@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0+ OR Apache-2.0
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
 /*
  * Copyright (C) 2019 Li Guifu <blucerlee@gmail.com>
  *                    Gao Xiang <xiang@kernel.org>
@@ -123,7 +123,7 @@ ssize_t erofs_sys_lsetxattr(const char *path, const char *name,
 	errno = ENODATA;
 #endif
 	if (ret < 0)
-		return errno;
+		return -errno;
 	return ret;
 }
 

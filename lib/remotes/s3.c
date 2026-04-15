@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0+ OR Apache-2.0
+// SPDX-License-Identifier: GPL-2.0+ OR MIT
 /*
  * Copyright (C) 2025 HUAWEI, Inc.
  *             http://www.huawei.com/
@@ -911,8 +911,10 @@ s3erofs_create_object_iterator(struct erofs_s3 *s3, const char *path,
 		iter->bucket = NULL;
 		iter->prefix = strdup(path + 1);
 	} else {
-		if (++prefix - path > S3EROFS_PATH_MAX)
+		if (++prefix - path > S3EROFS_PATH_MAX) {
+			free(iter);
 			return ERR_PTR(-EINVAL);
+		}
 		iter->bucket = strndup(path, prefix - path);
 		iter->prefix = strdup(prefix);
 	}
